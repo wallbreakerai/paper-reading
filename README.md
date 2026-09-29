@@ -1,40 +1,74 @@
 # paper-reading
 
-本地双语论文阅读工具：档案库 → arxiv/ar5iv 导入 → 章节块双栏对读 + 句对全文翻译（非总结）。
+本地双语论文阅读：分区档案库 → arXiv / ar5iv 导入 → 章节块双栏对读 + 句对全文翻译（非总结）→ 笔记 / Paper QA。
 
-## 启动
+单进程 Next.js，默认端口 **6864**（含 UI 与 API），无独立 Python 服务。
+
+## 快速开始
 
 ```bash
-chmod +x start.sh
-./start.sh
+cp .env.example .env   # 填写 API_KEY / BASE_URL / MODEL
+npm install
+./start.sh             # 或 npm run dev → http://localhost:6864
 ```
 
-- 前端：http://localhost:6864  
-- API：http://127.0.0.1:8010  
+强制释放占用端口：`FORCE_FREE_PORTS=1 ./start.sh`
 
-强制释放端口：`FORCE_FREE_PORTS=1 ./start.sh`
+生产：
+
+```bash
+npm run build && npm start
+npm run dev
+```
+
+## 环境变量（`.env`）
+
+| 变量 | 说明 |
+|------|------|
+| `API_KEY` | OpenAI 兼容网关密钥 |
+| `BASE_URL` | API 根地址（无 path 时自动补 `/v1`） |
+| `MODEL` | 模型名 |
+
+LLM 只读 `.env`；应用内设置页仅可改 `libraryDir`（落盘 `data/settings.json`）。
+
+## 功能概览
+
+- **分区 / 论文**：侧栏管理，拖拽排序；粘贴 arXiv / ar5iv 链接导入
+- **阅读**：英中双栏按章节块对齐；句对悬停联亮；公式 / 图复用原文 HTML
+- **翻译**：进阅读页懒解析结构 → 按块流式翻译；可暂停 / 续译 / 失败后手动重试
+- **笔记**：每篇 `notes.md`
+- **Paper QA**：基于 `reading_structure` 原文上下文的流式问答（与翻译共用 LLM）
+
+术语与状态机见 [CONTEXT.md](./CONTEXT.md)。
 
 ## 技术栈
 
-- `web/` Next.js 15 + React 19  
-- `python/` FastAPI  
-- 数据：`data/library/`、`data/settings.json`  
-- LLM：项目根目录 `.env`（`API_KEY` / `BASE_URL` / `MODEL`）  
+- Next.js 15 + React 19（`src/app` 页面与 Route Handlers，`src/lib` 服务端逻辑）
+- AI SDK（`ai` + `@ai-sdk/openai`）
+- cheerio 解析 ar5iv HTML → `reading_structure.json`
+- 数据：文件系统 `data/library/`（不迁 SQLite）
 
 ```bash
-cp .env.example .env
-# 编辑 .env 后重启 ./start.sh
+npm test    # src/lib/**/*.test.ts
+npm run build
 ```
 
-## 开发
+## 数据布局
 
-依赖装在 **conda base**（不使用项目内 `.venv`）：
-
-```bash
-conda activate base
-pip install -r python/requirements.txt
-cd python && PYTHONPATH=. pytest -q
-cd ../web && npm install && npm run dev -- -p 6864
+```
+data/
+  settings.json          # 仅 libraryDir（可 gitignore）
+  library/
+    _order.json
+    <Partition>/
+      _order.json
+      <slug>/
+        meta.json
+        article.html / assets/
+        reading_structure.json
+        translation.json
+        notes.md
+        qa-chat.json     # 懒创建
 ```
 
-视觉风格对齐 progress（Geist、中性 oklch、浅色侧栏）；分区支持拖拽排序。
+导入与翻译任务跑在 Next 进程内；进程重启会中断进行中的 job（与旧行为一致）。

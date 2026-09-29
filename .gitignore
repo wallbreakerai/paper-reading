@@ -1,22 +1,8 @@
 # Dependencies / build
 node_modules/
-web/node_modules/
-web/.next/
-web/out/
-web/tsconfig.tsbuildinfo
+.next/
+out/
 *.tsbuildinfo
-
-# Python
-.venv/
-python/.venv/
-python/__pycache__/
-python/**/__pycache__/
-*.py[cod]
-.Python
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
 
 # Local runtime data (papers, settings)
 tmp/
